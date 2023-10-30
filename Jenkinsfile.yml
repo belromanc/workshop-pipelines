@@ -213,7 +213,7 @@ stages {
             }
         }
     }
-}
+
 
 def getPomVersion() {
     return readMavenPom().version
