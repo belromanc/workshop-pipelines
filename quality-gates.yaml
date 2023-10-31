@@ -1,0 +1,25 @@
+stages:
+  - build
+  - test
+  - deploy
+ 
+quality_gate:
+  stage: test
+  rules:
+    - code_quality:
+        threshold: 90
+    - unit_test_coverage:
+        threshold: 80
+    - security_scan:
+        threshold: 0
+ 
+jobs:
+  - build:
+      stage: build
+      script:
+        - echo "fase build de quality gate"
+ 
+  - test:
+      stage: test
+      script:
+        - echo "fase test de quality gate"
