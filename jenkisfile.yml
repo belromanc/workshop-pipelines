@@ -178,7 +178,6 @@ stages {
        
         stage('Performance tests') {
             steps {
-                ...
                 perfReport(
                     sourceDataFiles: 'target/jmeter/results/*.csv',
                     errorUnstableThreshold: qualityGates.performance.throughput.error.unstable,
