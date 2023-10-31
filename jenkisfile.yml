@@ -211,3 +211,4 @@ def getPomVersionNoQualifier() {
 def getPomArtifactId() {
     return readMavenPom().artifactId
 }
+}
