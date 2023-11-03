@@ -112,7 +112,6 @@ spec:
                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
             }
         }
-
         stage('Build & push container image') {
             steps {
                 echo '-=- build & push container image -=-'
@@ -136,64 +135,65 @@ spec:
                     }
                 }
             }
-            stage('Promote container image') {
-                steps {
-                    echo '-=- promote container image -=-'
-                    container('podman') {
-                        // when using latest or a non-snapshot tag to deploy GA version
-                        // this tag push should trigger the change in staging/production environment
-                        sh "podman tag $IMAGE_SNAPSHOT $CONTAINER_REGISTRY_URL/$IMAGE_GA"
-                        sh "podman push $CONTAINER_REGISTRY_URL/$IMAGE_GA"
-                        sh "podman tag $IMAGE_SNAPSHOT $CONTAINER_REGISTRY_URL/$IMAGE_GA_LATEST"
-                        sh "podman push $CONTAINER_REGISTRY_URL/$IMAGE_GA_LATEST"
-                    }
+        }
+        stage('Promote container image') {
+            steps {
+                echo '-=- promote container image -=-'
+                container('podman') {
+                    // when using latest or a non-snapshot tag to deploy GA version
+                    // this tag push should trigger the change in staging/production environment
+                    sh "podman tag $IMAGE_SNAPSHOT $CONTAINER_REGISTRY_URL/$IMAGE_GA"
+                    sh "podman push $CONTAINER_REGISTRY_URL/$IMAGE_GA"
+                    sh "podman tag $IMAGE_SNAPSHOT $CONTAINER_REGISTRY_URL/$IMAGE_GA_LATEST"
+                    sh "podman push $CONTAINER_REGISTRY_URL/$IMAGE_GA_LATEST"
                 }
             }
-            stage('Integration tests') {
-                steps {
-                    echo '-=- execute integration tests -=-'
-                    sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 ${EPHTEST_BASE_URL}actuator/health"
-                    sh "./mvnw failsafe:integration-test failsafe:verify -Dtest.target.server.url=$EPHTEST_BASE_URL"
-                    sh "java -jar target/dependency/jacococli.jar dump --address $EPHTEST_CONTAINER_NAME-jacoco --port $APP_JACOCO_PORT --destfile target/jacoco-it.exec"
-                    sh 'mkdir target/site/jacoco-it'
-                    sh 'java -jar target/dependency/jacococli.jar report target/jacoco-it.exec --classfiles target/classes --xml target/site/jacoco-it/jacoco.xml'
-                    junit 'target/failsafe-reports/*.xml'
-                    jacoco execPattern: 'target/jacoco-it.exec'
+        }
+        stage('Integration tests') {
+            steps {
+                echo '-=- execute integration tests -=-'
+                sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 ${EPHTEST_BASE_URL}actuator/health"
+                sh "./mvnw failsafe:integration-test failsafe:verify -Dtest.target.server.url=$EPHTEST_BASE_URL"
+                sh "java -jar target/dependency/jacococli.jar dump --address $EPHTEST_CONTAINER_NAME-jacoco --port $APP_JACOCO_PORT --destfile target/jacoco-it.exec"
+                sh 'mkdir target/site/jacoco-it'
+                sh 'java -jar target/dependency/jacococli.jar report target/jacoco-it.exec --classfiles target/classes --xml target/site/jacoco-it/jacoco.xml'
+                junit 'target/failsafe-reports/*.xml'
+                jacoco execPattern: 'target/jacoco-it.exec'
+            }
+        }
+        stage('Performance tests') {
+            steps {
+                perfReport(
+                    sourceDataFiles: 'target/jmeter/results/*.csv',
+                    errorUnstableThreshold: qualityGates.performance.throughput.error.unstable,
+                    errorFailedThreshold: qualityGates.performance.throughput.error.failed,
+                    errorUnstableResponseTimeThreshold: qualityGates.performance.throughput.response.unstable)
+            }
+        }
+        stage('Promote container image') {
+            steps {
+                echo '-=- promote container image -=-'
+                container('podman') {
+                    // when using latest or a non-snapshot tag to deploy GA version
+                    // this tag push should trigger the change in staging/production environment
+                    sh "podman tag $IMAGE_SNAPSHOT $CONTAINER_REGISTRY_URL/$IMAGE_GA"
+                    sh "podman push $CONTAINER_REGISTRY_URL/$IMAGE_GA"
+                    sh "podman tag $IMAGE_SNAPSHOT $CONTAINER_REGISTRY_URL/$IMAGE_GA_LATEST"
+                    sh "podman push $CONTAINER_REGISTRY_URL/$IMAGE_GA_LATEST"
                 }
             }
-            stage('Performance tests') {
-                steps {
-                    perfReport(
-                        sourceDataFiles: 'target/jmeter/results/*.csv',
-                        errorUnstableThreshold: qualityGates.performance.throughput.error.unstable,
-                        errorFailedThreshold: qualityGates.performance.throughput.error.failed,
-                        errorUnstableResponseTimeThreshold: qualityGates.performance.throughput.response.unstable)
+        }
+        stage('Code inspection & quality gate') {
+            steps {
+                echo '-=- run code inspection & check quality gate -=-'
+                withSonarQubeEnv('ci-sonarqube') {
+                    sh './mvnw sonar:sonar'
+                }
+                timeout(time: 10, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
                 }
             }
-            stage('Promote container image') {
-                steps {
-                    echo '-=- promote container image -=-'
-                    container('podman') {
-                        // when using latest or a non-snapshot tag to deploy GA version
-                        // this tag push should trigger the change in staging/production environment
-                        sh "podman tag $IMAGE_SNAPSHOT $CONTAINER_REGISTRY_URL/$IMAGE_GA"
-                        sh "podman push $CONTAINER_REGISTRY_URL/$IMAGE_GA"
-                        sh "podman tag $IMAGE_SNAPSHOT $CONTAINER_REGISTRY_URL/$IMAGE_GA_LATEST"
-                        sh "podman push $CONTAINER_REGISTRY_URL/$IMAGE_GA_LATEST"
-                    }
-                }
-            }
-            stage('Code inspection & quality gate') {
-                steps {
-                    echo '-=- run code inspection & check quality gate -=-'
-                    withSonarQubeEnv('ci-sonarqube') {
-                        sh './mvnw sonar:sonar'
-                    }
-                    timeout(time: 10, unit: 'MINUTES') {
-                        waitForQualityGate abortPipeline: true
-                    }
-                }
-            }
+        }
         }
     }
 }
