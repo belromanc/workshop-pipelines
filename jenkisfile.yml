@@ -31,6 +31,14 @@ spec:
       securityContext:
         runAsUser: 0
         privileged: true
+    - name: lhci
+      image: docker.io/patrickhulce/lhci-client:0.12.0
+      command:
+        - cat
+      tty: true
+      securityContext:
+        runAsUser: 0
+        privileged: true
   volumes:
     - name: m2-cache
       hostPath:
