@@ -1,25 +1,33 @@
-stages:
-  - build
-  - test
-  - deploy
+performance:
+  throughput:
+    error:
+      unstable: 0
+      failed: 5
+    response:
+      unstable: 'default.jtl:100'
  
-quality_gate:
-  stage: test
-  rules:
-    - code_quality:
-        threshold: 90
-    - unit_test_coverage:
-        threshold: 80
-    - security_scan:
-        threshold: 0
- 
-jobs:
-  - build:
-      stage: build
-      script:
-        - echo "fase build de quality gate"
- 
-  - test:
-      stage: test
-      script:
-        - echo "fase test de quality gate"
+security:
+  static:
+    high:
+      unstable: 0
+      failed: 0
+    medium:
+      unstable: 0
+      failed: 5
+  dynamic:
+    high:
+      unstable: 0
+      failed: 0
+    medium:
+      unstable: 0
+      failed: 5
+  dependencies:
+    critical:
+      unstable: 10
+      failed: 10
+    high:
+      unstable: 10
+      failed: 10
+    medium:
+      unstable: 15
+      failed: 15
