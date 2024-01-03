@@ -1,7 +1,9 @@
 name: Trivy Scan
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - ramaPrueba  # Adjust the branch as needed
 
 jobs:
   trivy_scan:
