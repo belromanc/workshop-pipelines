@@ -1,0 +1,27 @@
+name: Trivy Scan
+
+on:
+  push:
+    branches:
+      - ramaPrueba  # Adjust the branch as needed
+
+jobs:
+  trivy_scan:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Install Trivy
+      run: |
+        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+        echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+        sudo apt-get update
+        sudo apt-get install trivy
+
+    - name: Run SAST tools Run Trivy vulnerability scanner in repo mode
+      run: trivy fs --ignore-unfixed --format table .
+
+    - name: Display Trivy Scan Results
+      run: cat trivy-results.json
