@@ -22,6 +22,3 @@ jobs:
 
     - name: Run SAST tools Run Trivy vulnerability scanner in repo mode
       run: trivy fs --ignore-unfixed --format table .
-
-    - name: Display Trivy Scan Results
-      run: cat trivy-results.json
